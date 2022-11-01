@@ -90,11 +90,11 @@ impl Encoder<StratumMessage> for StratumCodec {
                 };
                 serde_json::to_vec(&request).unwrap_or_default()
             }
-            StratumMessage::Authorize(id, account ,worker_name, worker_password) => {
+            StratumMessage::Authorize(id, account, worker_name, worker_password) => {
                 let request = Request {
                     jsonrpc: Version::V2,
                     method: "mining.authorize",
-                    params: Some(vec![worker_name, worker_password]),
+                    params: Some(vec![account, worker_name, worker_password]),
                     id: Some(id),
                 };
                 serde_json::to_vec(&request).unwrap_or_default()
@@ -148,13 +148,17 @@ impl Encoder<StratumMessage> for StratumCodec {
                     serde_json::to_vec(&response).unwrap_or_default()
                 }
                 None => {
-                    let response = Response::<Option<ResponseParams>, ()>::result(Version::V2, result, Some(id));
+                    let response = Response::<Option<ResponseParams>, ()>::result(
+                        Version::V2,
+                        result,
+                        Some(id),
+                    );
                     serde_json::to_vec(&response).unwrap_or_default()
                 }
             },
         };
-        let string =
-            std::str::from_utf8(&bytes).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+        let string = std::str::from_utf8(&bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
         self.codec
             .encode(string, dst)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
@@ -165,14 +169,20 @@ impl Encoder<StratumMessage> for StratumCodec {
 fn unwrap_str_value(value: &Value) -> Result<String, io::Error> {
     match value {
         Value::String(s) => Ok(s.clone()),
-        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Param is not str")),
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Param is not str",
+        )),
     }
 }
 
 fn unwrap_bool_value(value: &Value) -> Result<bool, io::Error> {
     match value {
         Value::Bool(b) => Ok(*b),
-        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Param is not bool")),
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Param is not bool",
+        )),
     }
 }
 
@@ -181,7 +191,10 @@ fn unwrap_u64_value(value: &Value) -> Result<u64, io::Error> {
         Value::Number(n) => Ok(n
             .as_u64()
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Param is not u64"))?),
-        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Param is not u64")),
+        _ => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Param is not u64",
+        )),
     }
 }
 
@@ -223,7 +236,12 @@ impl Decoder for StratumCodec {
                     let session_id = match &params[2] {
                         Value::String(s) => Some(s),
                         Value::Null => None,
-                        _ => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid params")),
+                        _ => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::InvalidData,
+                                "Invalid params",
+                            ))
+                        }
                     };
                     StratumMessage::Subscribe(
                         id.unwrap_or(Id::Num(0)),
@@ -239,7 +257,12 @@ impl Decoder for StratumCodec {
                     let account = unwrap_str_value(&params[0])?;
                     let worker_name = unwrap_str_value(&params[1])?;
                     let worker_password = unwrap_str_value(&params[2])?;
-                    StratumMessage::Authorize(id.unwrap_or(Id::Num(0)), account ,worker_name, worker_password)
+                    StratumMessage::Authorize(
+                        id.unwrap_or(Id::Num(0)),
+                        account,
+                        worker_name,
+                        worker_password,
+                    )
                 }
                 "mining.set_target" => {
                     if params.len() != 1 {
@@ -277,7 +300,13 @@ impl Decoder for StratumCodec {
                     let job_id = unwrap_str_value(&params[1])?;
                     let nonce = unwrap_str_value(&params[2])?;
                     let proof = unwrap_str_value(&params[3])?;
-                    StratumMessage::Submit(id.unwrap_or(Id::Num(0)), worker_name, job_id, nonce, proof)
+                    StratumMessage::Submit(
+                        id.unwrap_or(Id::Num(0)),
+                        worker_name,
+                        job_id,
+                        nonce,
+                        proof,
+                    )
                 }
                 _ => {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "Unknown method"));
@@ -288,7 +317,9 @@ impl Decoder for StratumCodec {
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
             let id = response.id;
             match response.payload {
-                Ok(payload) => StratumMessage::Response(id.unwrap_or(Id::Num(0)), Some(payload), None),
+                Ok(payload) => {
+                    StratumMessage::Response(id.unwrap_or(Id::Num(0)), Some(payload), None)
+                }
                 Err(error) => StratumMessage::Response(id.unwrap_or(Id::Num(0)), None, Some(error)),
             }
         };
