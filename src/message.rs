@@ -8,7 +8,7 @@ pub enum StratumMessage {
     Subscribe(Id, String, String, Option<String>),
 
     /// (id, worker_name, worker_password)
-    Authorize(Id, String, String),
+    Authorize(Id, String ,String, String),
 
     /// This is the difficulty target for the next job.
     /// (difficulty_target)

@@ -90,7 +90,7 @@ impl Encoder<StratumMessage> for StratumCodec {
                 };
                 serde_json::to_vec(&request).unwrap_or_default()
             }
-            StratumMessage::Authorize(id, worker_name, worker_password) => {
+            StratumMessage::Authorize(id, account ,worker_name, worker_password) => {
                 let request = Request {
                     jsonrpc: Version::V2,
                     method: "mining.authorize",
@@ -233,12 +233,13 @@ impl Decoder for StratumCodec {
                     )
                 }
                 "mining.authorize" => {
-                    if params.len() != 2 {
+                    if params.len() != 3 {
                         return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid params"));
                     }
-                    let worker_name = unwrap_str_value(&params[0])?;
-                    let worker_password = unwrap_str_value(&params[1])?;
-                    StratumMessage::Authorize(id.unwrap_or(Id::Num(0)), worker_name, worker_password)
+                    let account = unwrap_str_value(&params[0])?;
+                    let worker_name = unwrap_str_value(&params[1])?;
+                    let worker_password = unwrap_str_value(&params[2])?;
+                    StratumMessage::Authorize(id.unwrap_or(Id::Num(0)), account ,worker_name, worker_password)
                 }
                 "mining.set_target" => {
                     if params.len() != 1 {
