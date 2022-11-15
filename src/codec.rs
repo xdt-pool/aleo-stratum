@@ -1,6 +1,7 @@
 use std::io;
 
 use bytes::BytesMut;
+use downcast_rs::{impl_downcast, DowncastSync};
 use erased_serde::Serialize as ErasedSerialize;
 use json_rpc_types::{Id, Request, Response, Version};
 use serde::{ser::SerializeSeq, Deserialize, Serialize};
@@ -29,9 +30,17 @@ struct NotifyParams(String, String, Option<String>, bool);
 #[derive(Serialize, Deserialize)]
 struct SubscribeParams(String, String, Option<String>);
 
+pub trait BoxedType: ErasedSerialize + Send + DowncastSync {}
+erased_serde::serialize_trait_object!(BoxedType);
+impl_downcast!(sync BoxedType);
+
+impl BoxedType for String {}
+impl BoxedType for Option<u64> {}
+impl BoxedType for Option<String> {}
+
 pub enum ResponseParams {
     Bool(bool),
-    Array(Vec<Box<dyn ErasedSerialize + Send + Sync>>),
+    Array(Vec<Box<dyn BoxedType>>),
     Null,
 }
 
@@ -63,7 +72,7 @@ impl<'de> Deserialize<'de> for ResponseParams {
         match value {
             Value::Bool(b) => Ok(ResponseParams::Bool(b)),
             Value::Array(a) => {
-                let mut vec: Vec<Box<dyn ErasedSerialize + Send + Sync>> = Vec::new();
+                let mut vec: Vec<Box<dyn BoxedType>> = Vec::new();
                 let _ = a.iter().map(|v| match v {
                     Value::String(s) => vec.push(Box::new(s.clone())),
                     Value::Number(n) => vec.push(Box::new(n.as_u64())),
