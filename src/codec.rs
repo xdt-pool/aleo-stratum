@@ -73,7 +73,8 @@ impl<'de> Deserialize<'de> for ResponseParams {
             Value::Bool(b) => Ok(ResponseParams::Bool(b)),
             Value::Array(a) => {
                 let mut vec: Vec<Box<dyn BoxedType>> = Vec::new();
-                let _ = a.iter().map(|v| match v {
+                a.iter().for_each(|v| match v {
+                    Value::Null => vec.push(Box::new(None::<String>)),
                     Value::String(s) => vec.push(Box::new(s.clone())),
                     Value::Number(n) => vec.push(Box::new(n.as_u64())),
                     _ => {}
@@ -293,7 +294,14 @@ impl Decoder for StratumCodec {
                     let nonce = unwrap_str_value(&params[2])?;
                     let commitment = unwrap_str_value(&params[3])?;
                     let proof = unwrap_str_value(&params[4])?;
-                    StratumMessage::Submit(id.unwrap_or(Id::Num(0)), worker_name, job_id, nonce, commitment, proof)
+                    StratumMessage::Submit(
+                        id.unwrap_or(Id::Num(0)),
+                        worker_name,
+                        job_id,
+                        nonce,
+                        commitment,
+                        proof,
+                    )
                 }
                 _ => {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "Unknown method"));
